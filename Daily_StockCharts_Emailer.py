@@ -80,14 +80,17 @@ def main():
 	if not last_email_today():
 		# scrape chart image from stockcharts.com
 		tmp_img_name = get_date_str(True) + STOCKCHARTS_IMG_EXT
+		error_msg = ""
 		try:
 			scrape_img(tmp_img_name)
-		except:
+		except Exception as e:
+			print("ERROR: ", e)
+			error_msg = str(e)
 			shutil.copyfile(ERROR_IMG, tmp_img_name)
 		# send email
 		pretty_date = datetime.datetime.now().strftime("%B %d, %Y, %I:%M%p")
 		subject = "Today's chart for {} - {}".format(TICKER, pretty_date)
-		message = subject + "\n" + get_request_url() + "\n"
+		message = subject + "\n" + get_request_url() + "\n" + error_msg + "\n"
 		send_email(subject, message, tmp_img_name)
 		# cleanup
 		os.remove(tmp_img_name)
