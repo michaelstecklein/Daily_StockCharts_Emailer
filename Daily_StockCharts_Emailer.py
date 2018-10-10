@@ -7,6 +7,10 @@ import requests
 from bs4 import BeautifulSoup
 import shutil, os
 import datetime
+from PIL import Image
+import sys
+sys.path.append('rsi_recognition')
+import ocr
 
 
 TICKER = "UCO"
@@ -33,13 +37,13 @@ def update_last_email():
 	with open(LAST_UPDATE_FILE, "w") as f:
 		f.write(get_date_str())
 
-def get_request_url():
-	return "http://stockcharts.com/h-sc/ui?s={}".format(TICKER.lower())
+def get_request_url(ticker=None):
+	return "http://stockcharts.com/h-sc/ui?s={}".format(TICKER.lower() if ticker is None else ticker)
 
-def scrape_img(dest_img):
+def scrape_img(dest_img, ticker=None):
 	''' Scrape chart image from stockcharts.com and save it to the
 	destination image path. '''
-	request_url = get_request_url()
+	request_url = get_request_url(ticker)
 	user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36'
 	headers = {'User-Agent': user_agent}
 	page = requests.get(request_url, headers=headers)
@@ -84,9 +88,13 @@ def main():
 			scrape_img(tmp_img_name)
 		except:
 			shutil.copyfile(ERROR_IMG, tmp_img_name)
+		# read the RSI value
+		rsi = ocr.get_rsi_str(Image.open(tmp_img_name))
+		if rsi is None:
+			rsi = "ERROR"
 		# send email
 		pretty_date = datetime.datetime.now().strftime("%B %d, %Y, %I:%M%p")
-		subject = "Today's chart for {} - {}".format(TICKER, pretty_date)
+		subject = "RSI: {},  Today's chart for {} - {}".format(rsi, TICKER, pretty_date)
 		message = subject + "\n" + get_request_url() + "\n"
 		send_email(subject, message, tmp_img_name)
 		# cleanup
