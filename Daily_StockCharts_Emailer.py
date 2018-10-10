@@ -17,6 +17,8 @@ TICKER = "UCO"
 STOCKCHARTS_IMG_EXT = ".png"
 LAST_UPDATE_FILE = "last_update.date"
 ERROR_IMG = "error.jpg"
+STRATEGY_DESCRIPTION = "Buy $100 worth when the RSI value rises above 35 after dropping below 33. Sell all quantities purchased since the last sell when the RSI hits 70. Do not buy more than 2 consecutive batches ($100/batch) between sells, (and therefor do not sell more than twice consecutively as well)."
+
 
 def get_date_str(with_time=False):
 	if with_time:
@@ -84,9 +86,12 @@ def main():
 	if not last_email_today():
 		# scrape chart image from stockcharts.com
 		tmp_img_name = get_date_str(True) + STOCKCHARTS_IMG_EXT
+		error_msg = ""
 		try:
 			scrape_img(tmp_img_name)
-		except:
+		except Exception as e:
+			print("ERROR: ", e)
+			error_msg = str(e)
 			shutil.copyfile(ERROR_IMG, tmp_img_name)
 		# read the RSI value
 		rsi = ocr.get_rsi_str(Image.open(tmp_img_name))
@@ -95,7 +100,7 @@ def main():
 		# send email
 		pretty_date = datetime.datetime.now().strftime("%B %d, %Y, %I:%M%p")
 		subject = "RSI: {},  Today's chart for {} - {}".format(rsi, TICKER, pretty_date)
-		message = subject + "\n" + get_request_url() + "\n"
+		message = subject + "\n" + get_request_url() + "\n" + error_msg + "\n" + STRATEGY_DESCRIPTION + "\n"
 		send_email(subject, message, tmp_img_name)
 		# cleanup
 		os.remove(tmp_img_name)
