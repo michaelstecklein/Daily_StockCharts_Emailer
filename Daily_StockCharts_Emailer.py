@@ -54,13 +54,13 @@ def scrape_img(dest_img, ticker=None):
 	if len(img_tag) is 0:
 		raise RuntimeError
 	img_src = img_tag[0]['src']
-	img_url = "https://stockcharts.com" + img_src
+	img_url = "http:" + img_src
 	img_req = requests.get(img_url, headers=headers, stream=True)
 	with open(dest_img, 'wb') as f:
 		img_req.raw.decode_content = True
 		shutil.copyfileobj(img_req.raw, f)
 
-def send_email(subject, message, img_file):
+def send_email(subject, message, img_file=None):
 	fromaddr = "bgrogh@gmail.com"
 	toaddr = "michaelrstecklein@gmail.com"
 	msg = MIMEMultipart()
@@ -69,9 +69,10 @@ def send_email(subject, message, img_file):
 	msg['Subject'] = subject
 	msgEmbedded = MIMEMultipart("embedded")
 	msg.attach(msgEmbedded)
-	img_data = open(img_file, 'rb').read()
-	image = MIMEImage(img_data, name=os.path.basename(img_file))
-	msgEmbedded.attach(image)
+	if img_file is not None:
+		img_data = open(img_file, 'rb').read()
+		image = MIMEImage(img_data, name=os.path.basename(img_file))
+		msgEmbedded.attach(image)
 	body = "{}".format(message)
 	msgEmbedded.attach(MIMEText(body, 'plain'))
 	server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -106,4 +107,7 @@ def main():
 		os.remove(tmp_img_name)
 
 if __name__ == "__main__":
-	main()
+	try:
+		main()
+	except Exception as e:
+		send_email("ERROR - RaspberryPi RSI Program", "An exception has been caught in main().\n%s" % str(e))
